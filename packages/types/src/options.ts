@@ -59,6 +59,10 @@ export interface ResolvedSlidevOptions extends RootsInfo, SlidevEntryOptions {
   roots: string[]
   mode: 'dev' | 'build' | 'export'
   utils: ResolvedSlidevUtils
+  /**
+   * Absolute path to the source PDF file, set only when entry is a .pdf file
+   */
+  pdfPath?: string
 }
 
 export interface ResolvedSlidevUtils {

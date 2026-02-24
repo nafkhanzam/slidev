@@ -54,6 +54,7 @@
     "mermaid": "catalog:frontend",
     "monaco-editor": "catalog:monaco",
     "nanotar": "catalog:frontend",
+    "pdfjs-dist": "catalog:frontend",
     "pptxgenjs": "catalog:prod",
     "recordrtc": "catalog:frontend",
     "shiki": "catalog:frontend",

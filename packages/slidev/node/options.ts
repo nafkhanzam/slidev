@@ -1,8 +1,10 @@
-import type { ResolvedSlidevOptions, ResolvedSlidevUtils, SlidevData, SlidevEntryOptions } from '@slidev/types'
+import type { ResolvedSlidevOptions, ResolvedSlidevUtils, SlideInfo, SlidevData, SlidevEntryOptions, SlidevMarkdown, SourceSlideInfo } from '@slidev/types'
+import { readFile } from 'node:fs/promises'
 import path from 'node:path'
 import { objectMap, uniq } from '@antfu/utils'
 import fg from 'fast-glob'
 import { createDebug } from 'obug'
+import { PDFDocument } from 'pdf-lib'
 import pm from 'picomatch'
 import { resolveAddons } from './integrations/addons'
 import { getThemeMeta, resolveTheme } from './integrations/themes'
@@ -14,12 +16,98 @@ import setupShiki from './setups/shiki'
 
 const debug = createDebug('slidev:options')
 
+async function resolvePdfOptions(
+  entry: string,
+  rootsInfo: Awaited<ReturnType<typeof getRoots>>,
+  entryOptions: SlidevEntryOptions,
+  mode: ResolvedSlidevOptions['mode'],
+): Promise<ResolvedSlidevOptions> {
+  const pdfBytes = await readFile(entry)
+  const pdf = await PDFDocument.load(pdfBytes, { ignoreEncryption: true })
+  const pages = pdf.getPages()
+  const pageCount = pages.length
+  const firstPage = pages[0]
+  const { width, height } = firstPage.getSize()
+  const aspectRatio = width / height
+
+  const headmatter = { aspectRatio, editor: false }
+  const config = parser.resolveConfig(headmatter, undefined, entryOptions.entry)
+
+  const themeRaw = entryOptions.theme || 'none'
+  const [theme, themeRoot] = await resolveTheme(themeRaw, entry)
+  const themeRoots = themeRoot ? [themeRoot] : []
+  const addonRoots = await resolveAddons(config.addons)
+  const roots = uniq([...themeRoots, ...addonRoots, rootsInfo.userRoot])
+
+  const syntheticMarkdown: SlidevMarkdown = {
+    filepath: entry,
+    raw: '',
+    slides: [],
+  }
+
+  const slides: SlideInfo[] = Array.from({ length: pageCount }, (_, i) => {
+    const sourceSlide: SourceSlideInfo = {
+      revision: '1',
+      frontmatter: { layout: 'pdf' },
+      content: '',
+      frontmatterRaw: 'layout: pdf',
+      note: '',
+      filepath: entry,
+      index: i,
+      start: 0,
+      contentStart: 0,
+      end: 0,
+      raw: '',
+      contentRaw: '',
+    }
+    syntheticMarkdown.slides.push(sourceSlide)
+    return {
+      ...sourceSlide,
+      index: i,
+      source: sourceSlide,
+    }
+  })
+
+  const data: SlidevData = {
+    slides,
+    entry: syntheticMarkdown,
+    config,
+    headmatter,
+    features: { katex: false, monaco: false, tweet: false, mermaid: false },
+    markdownFiles: {},
+    watchFiles: {},
+  }
+
+  const resolved: Omit<ResolvedSlidevOptions, 'utils'> = {
+    ...rootsInfo,
+    ...entryOptions,
+    data,
+    mode,
+    entry,
+    themeRaw,
+    theme,
+    themeRoots,
+    addonRoots,
+    roots,
+    pdfPath: entry,
+  }
+
+  return {
+    ...resolved,
+    utils: await createDataUtils(resolved),
+  }
+}
+
 export async function resolveOptions(
   entryOptions: SlidevEntryOptions,
   mode: ResolvedSlidevOptions['mode'],
 ): Promise<ResolvedSlidevOptions> {
   const entry = await resolveEntry(entryOptions.entry)
   const rootsInfo = await getRoots(entry)
+
+  if (entry.endsWith('.pdf'))
+    return resolvePdfOptions(entry, rootsInfo, entryOptions, mode)
+
   const loaded = await parser.load(rootsInfo.userRoot, entry, undefined, mode)
 
   // Load theme data first, because it may affect the config

@@ -82,10 +82,14 @@ export async function findGlobalPkgRoot(name: string, ensure = false) {
 }
 
 export async function resolveEntry(entryRaw: string) {
-  if (!existsSync(entryRaw) && !entryRaw.endsWith('.md') && !/[/\\]/.test(entryRaw))
+  if (!existsSync(entryRaw) && !entryRaw.endsWith('.md') && !entryRaw.endsWith('.pdf') && !/[/\\]/.test(entryRaw))
     entryRaw += '.md'
   const entry = resolve(entryRaw)
   if (!existsSync(entry)) {
+    if (entryRaw.endsWith('.pdf')) {
+      console.error(`Entry PDF file "${entry}" does not exist`)
+      process.exit(1)
+    }
     // Check if stdin is available for prompts (i.e., is a TTY)
     if (!process.stdin.isTTY) {
       console.error(`Entry file "${entry}" does not exist and cannot prompt for confirmation`)

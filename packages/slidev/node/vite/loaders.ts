@@ -1,6 +1,7 @@
 import type { ResolvedSlidevOptions, SlideInfo, SlidePatch, SlidevData, SlidevServerOptions } from '@slidev/types'
 import type { LoadResult } from 'rollup'
 import type { ModuleNode, Plugin, ViteDevServer } from 'vite'
+import { readFile } from 'node:fs/promises'
 import { notNullish, range } from '@antfu/utils'
 import * as parser from '@slidev/parser/fs'
 import equal from 'fast-deep-equal'
@@ -73,6 +74,23 @@ export function createSlidesLoader(
       server = _server
       updateServerWatcher()
 
+      if (options.pdfPath) {
+        const pdfPath = options.pdfPath
+        server.middlewares.use('/__slidev/pdf', async (req, res, next) => {
+          if (req.method !== 'GET')
+            return next()
+          try {
+            const content = await readFile(pdfPath)
+            res.setHeader('Content-Type', 'application/pdf')
+            res.setHeader('Content-Length', content.length)
+            res.end(content)
+          }
+          catch {
+            next()
+          }
+        })
+      }
+
       server.middlewares.use(async (req, res, next) => {
         const match = req.url?.match(regexSlideReqPath)
         if (!match)
@@ -85,6 +103,12 @@ export function createSlidesLoader(
           return res.end()
         }
         else if (req.method === 'POST') {
+          // PDF slides are read-only
+          if (options.pdfPath) {
+            res.statusCode = 403
+            res.end(JSON.stringify({ error: 'PDF slides are read-only' }))
+            return
+          }
           const body: SlidePatch = await getBodyJson(req)
           const slide = data.slides[idx]
 
