@@ -24,8 +24,8 @@ export const useDrawings = createSharedComposable(() => {
   const drawingPinned = useLocalStorage('slidev-drawing-pinned', false)
   const brush = toReactive(useLocalStorage<Brush>('slidev-drawing-brush', {
     color: brushColors[0],
-    size: 4,
-    mode: 'stylus',
+    size: 2,
+    mode: 'draw',
   }))
 
   const isDrawing = ref(false)
@@ -33,7 +33,7 @@ export const useDrawings = createSharedComposable(() => {
   const canRedo = ref(false)
   const canClear = ref(false)
 
-  const _mode = ref<DrawingMode | 'arrow'>('stylus')
+  const _mode = ref<DrawingMode | 'arrow'>('draw')
   const syncUp = computed(() => configs.drawings.syncAll || isPresenter.value)
   let disableDump = false
 
@@ -138,7 +138,7 @@ export const useDrawings = createSharedComposable(() => {
       drawingMode.value = 'arrow'
     }
     else if (e.code === 'KeyS' && noModifier) {
-      drawingMode.value = 'stylus'
+      drawingMode.value = 'draw'
     }
     else if (e.code === 'KeyR' && noModifier) {
       drawingMode.value = 'rectangle'

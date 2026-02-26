@@ -25,7 +25,7 @@ function redo() {
   drauu.redo()
 }
 
-let lastDrawingMode: typeof drawingMode.value = 'stylus'
+let lastDrawingMode: typeof drawingMode.value = 'draw'
 function setDrawingMode(mode: typeof drawingMode.value) {
   drawingMode.value = mode
   drawingEnabled.value = true
@@ -48,7 +48,7 @@ function setBrushColor(color: typeof brush.color) {
     :initial-x="10"
     :initial-y="10"
   >
-    <IconButton title="Draw with stylus" :class="{ shallow: drawingMode !== 'stylus' }" @click="setDrawingMode('stylus')">
+    <IconButton title="Draw with stylus" :class="{ shallow: drawingMode !== 'draw' }" @click="setDrawingMode('draw')">
       <div class="i-carbon:pen" />
     </IconButton>
     <IconButton title="Draw a line" :class="{ shallow: drawingMode !== 'line' }" @click="setDrawingMode('line')">
